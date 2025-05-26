@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Edit, Trash2, Car } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Vehicle {
   licensePlate: string;
@@ -22,10 +23,13 @@ interface Vehicle {
 export function VehicleManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [filterType, setFilterType] = useState("all");
+  const { toast } = useToast();
 
   // Mock data
-  const [vehicles] = useState<Vehicle[]>([
+  const [vehicles, setVehicles] = useState<Vehicle[]>([
     { licensePlate: "ABC-123", customerID: 1, customerName: "John Doe", type: "Car", brand: "Toyota", color: "Red", status: "Parked" },
     { licensePlate: "XYZ-789", customerID: 2, customerName: "Jane Smith", type: "SUV", brand: "Honda", color: "Blue", status: "Available" },
     { licensePlate: "DEF-456", customerID: 3, customerName: "Mike Johnson", type: "Motorcycle", brand: "Yamaha", color: "Black", status: "Service" },
@@ -39,6 +43,66 @@ export function VehicleManagement() {
     const matchesType = filterType === "all" || vehicle.type.toLowerCase() === filterType.toLowerCase();
     return matchesSearch && matchesType;
   });
+
+  const handleAddVehicle = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const newVehicle: Vehicle = {
+      licensePlate: formData.get('licensePlate') as string,
+      customerID: parseInt(formData.get('customerID') as string),
+      customerName: "Customer Name", // In real app, fetch from customer ID
+      type: formData.get('type') as string,
+      brand: formData.get('brand') as string,
+      color: formData.get('color') as string,
+      status: 'Available',
+    };
+    setVehicles([...vehicles, newVehicle]);
+    setIsAddDialogOpen(false);
+    toast({
+      title: "Vehicle Added",
+      description: `Vehicle ${newVehicle.licensePlate} has been added successfully.`,
+    });
+  };
+
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setEditingVehicle(vehicle);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateVehicle = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingVehicle) return;
+    
+    const formData = new FormData(event.currentTarget);
+    const updatedVehicle: Vehicle = {
+      ...editingVehicle,
+      customerID: parseInt(formData.get('customerID') as string),
+      type: formData.get('type') as string,
+      brand: formData.get('brand') as string,
+      color: formData.get('color') as string,
+    };
+    
+    setVehicles(vehicles.map(v => 
+      v.licensePlate === editingVehicle.licensePlate ? updatedVehicle : v
+    ));
+    setIsEditDialogOpen(false);
+    setEditingVehicle(null);
+    toast({
+      title: "Vehicle Updated",
+      description: `Vehicle ${updatedVehicle.licensePlate} has been updated successfully.`,
+    });
+  };
+
+  const handleDeleteVehicle = (vehicle: Vehicle) => {
+    if (window.confirm(`Are you sure you want to delete vehicle ${vehicle.licensePlate}?`)) {
+      setVehicles(vehicles.filter(v => v.licensePlate !== vehicle.licensePlate));
+      toast({
+        title: "Vehicle Deleted",
+        description: `Vehicle ${vehicle.licensePlate} has been deleted.`,
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -64,46 +128,110 @@ export function VehicleManagement() {
             <DialogHeader>
               <DialogTitle>Add New Vehicle</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <form onSubmit={handleAddVehicle} className="space-y-4">
               <div>
                 <Label htmlFor="licensePlate">License Plate</Label>
-                <Input id="licensePlate" placeholder="ABC-123" />
+                <Input id="licensePlate" name="licensePlate" placeholder="ABC-123" required />
               </div>
               <div>
                 <Label htmlFor="customerID">Customer ID</Label>
-                <Input id="customerID" placeholder="1" type="number" />
+                <Input id="customerID" name="customerID" placeholder="1" type="number" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="type">Type</Label>
-                  <Select>
+                  <Select name="type" required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="car">Car</SelectItem>
-                      <SelectItem value="suv">SUV</SelectItem>
-                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                      <SelectItem value="truck">Truck</SelectItem>
+                      <SelectItem value="Car">Car</SelectItem>
+                      <SelectItem value="SUV">SUV</SelectItem>
+                      <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                      <SelectItem value="Truck">Truck</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="brand">Brand</Label>
-                  <Input id="brand" placeholder="Toyota" />
+                  <Input id="brand" name="brand" placeholder="Toyota" required />
                 </div>
               </div>
               <div>
                 <Label htmlFor="color">Color</Label>
-                <Input id="color" placeholder="Red" />
+                <Input id="color" name="color" placeholder="Red" required />
               </div>
-              <Button className="w-full" onClick={() => setIsAddDialogOpen(false)}>
+              <Button type="submit" className="w-full">
                 Add Vehicle
               </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Vehicle</DialogTitle>
+          </DialogHeader>
+          {editingVehicle && (
+            <form onSubmit={handleUpdateVehicle} className="space-y-4">
+              <div>
+                <Label>License Plate</Label>
+                <Input value={editingVehicle.licensePlate} disabled />
+              </div>
+              <div>
+                <Label htmlFor="editCustomerID">Customer ID</Label>
+                <Input 
+                  id="editCustomerID" 
+                  name="customerID" 
+                  defaultValue={editingVehicle.customerID}
+                  type="number" 
+                  required 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editType">Type</Label>
+                  <Select name="type" defaultValue={editingVehicle.type} required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Car">Car</SelectItem>
+                      <SelectItem value="SUV">SUV</SelectItem>
+                      <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                      <SelectItem value="Truck">Truck</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="editBrand">Brand</Label>
+                  <Input 
+                    id="editBrand" 
+                    name="brand" 
+                    defaultValue={editingVehicle.brand}
+                    required 
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="editColor">Color</Label>
+                <Input 
+                  id="editColor" 
+                  name="color" 
+                  defaultValue={editingVehicle.color}
+                  required 
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Update Vehicle
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Search and Filter */}
       <Card>
@@ -158,10 +286,15 @@ export function VehicleManagement() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleEditVehicle(vehicle)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteVehicle(vehicle)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
