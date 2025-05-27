@@ -15,7 +15,15 @@ export type ActivePage = 'dashboard' | 'customers' | 'vehicles' | 'parking' | 's
 const Index = () => {
   const [activePage, setActivePage] = useState<ActivePage>('dashboard');
 
+  console.log('Current active page:', activePage);
+
+  const handlePageChange = (page: ActivePage) => {
+    console.log('Changing page to:', page);
+    setActivePage(page);
+  };
+
   const renderActivePage = () => {
+    console.log('Rendering page:', activePage);
     switch (activePage) {
       case 'dashboard':
         return <Dashboard />;
@@ -32,6 +40,7 @@ const Index = () => {
       case 'tickets':
         return <TicketManagement />;
       default:
+        console.warn('Unknown page:', activePage);
         return <Dashboard />;
     }
   };
@@ -39,7 +48,7 @@ const Index = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
-        <AppSidebar activePage={activePage} setActivePage={setActivePage} />
+        <AppSidebar activePage={activePage} setActivePage={handlePageChange} />
         <main className="flex-1 p-6">
           {renderActivePage()}
         </main>

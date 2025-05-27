@@ -58,6 +58,11 @@ const menuItems = [
 ];
 
 export function AppSidebar({ activePage, setActivePage }: AppSidebarProps) {
+  const handleMenuClick = (page: ActivePage) => {
+    console.log('Menu clicked:', page);
+    setActivePage(page);
+  };
+
   return (
     <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="border-b border-gray-200 p-4">
@@ -75,9 +80,9 @@ export function AppSidebar({ activePage, setActivePage }: AppSidebarProps) {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
-                    onClick={() => setActivePage(item.page)}
+                    onClick={() => handleMenuClick(item.page)}
                     isActive={activePage === item.page}
-                    className="hover:bg-blue-50 hover:text-blue-700"
+                    className="hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
