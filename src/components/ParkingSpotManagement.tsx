@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Clock, Car } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ParkingSpot {
   parkingSpotID: number;
@@ -20,9 +20,10 @@ interface ParkingSpot {
 export function ParkingSpotManagement() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const { toast } = useToast();
 
   // Mock data
-  const [parkingSpots] = useState<ParkingSpot[]>([
+  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([
     { parkingSpotID: 1, spotType: "Standard", status: "Occupied", parkID: 1, parkName: "Main Lot", licensePlate: "ABC-123", startTime: "2024-05-26 08:00", endTime: "2024-05-26 18:00" },
     { parkingSpotID: 2, spotType: "Compact", status: "Available", parkID: 1, parkName: "Main Lot" },
     { parkingSpotID: 3, spotType: "Disabled", status: "Available", parkID: 1, parkName: "Main Lot" },
@@ -30,6 +31,45 @@ export function ParkingSpotManagement() {
     { parkingSpotID: 5, spotType: "Electric", status: "Maintenance", parkID: 1, parkName: "Main Lot" },
     { parkingSpotID: 6, spotType: "Standard", status: "Occupied", parkID: 2, parkName: "North Lot", licensePlate: "DEF-456", startTime: "2024-05-26 10:30", endTime: "2024-05-26 16:30" },
   ]);
+
+  const handleReserveSpot = (spotId: number) => {
+    console.log('Reserve spot clicked:', spotId);
+    setParkingSpots(spots => spots.map(spot => 
+      spot.parkingSpotID === spotId 
+        ? { ...spot, status: 'Reserved' as const, licensePlate: "TEMP-123", startTime: new Date().toISOString(), endTime: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() }
+        : spot
+    ));
+    toast({
+      title: "Spot Reserved",
+      description: `Parking spot #${spotId} has been reserved successfully.`,
+    });
+  };
+
+  const handleEndSession = (spotId: number) => {
+    console.log('End session clicked:', spotId);
+    setParkingSpots(spots => spots.map(spot => 
+      spot.parkingSpotID === spotId 
+        ? { ...spot, status: 'Available' as const, licensePlate: undefined, startTime: undefined, endTime: undefined }
+        : spot
+    ));
+    toast({
+      title: "Session Ended",
+      description: `Parking session for spot #${spotId} has been ended.`,
+    });
+  };
+
+  const handleMarkAvailable = (spotId: number) => {
+    console.log('Mark available clicked:', spotId);
+    setParkingSpots(spots => spots.map(spot => 
+      spot.parkingSpotID === spotId 
+        ? { ...spot, status: 'Available' as const }
+        : spot
+    ));
+    toast({
+      title: "Spot Available",
+      description: `Parking spot #${spotId} is now available.`,
+    });
+  };
 
   const filteredSpots = parkingSpots.filter(spot => {
     const matchesStatus = filterStatus === "all" || spot.status.toLowerCase() === filterStatus.toLowerCase();
@@ -195,13 +235,13 @@ export function ParkingSpotManagement() {
 
                 <div className="flex gap-2 pt-2">
                   {spot.status === 'Available' && (
-                    <Button size="sm" className="flex-1">Reserve</Button>
+                    <Button size="sm" className="flex-1" onClick={() => handleReserveSpot(spot.parkingSpotID)}>Reserve</Button>
                   )}
                   {spot.status === 'Occupied' && (
-                    <Button size="sm" variant="outline" className="flex-1">End Session</Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEndSession(spot.parkingSpotID)}>End Session</Button>
                   )}
                   {spot.status === 'Maintenance' && (
-                    <Button size="sm" variant="outline" className="flex-1">Mark Available</Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleMarkAvailable(spot.parkingSpotID)}>Mark Available</Button>
                   )}
                 </div>
               </div>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Clock, Car, Ticket } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface ParkingTicket {
   ticketID: number;
@@ -21,9 +21,10 @@ interface ParkingTicket {
 export function TicketManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const { toast } = useToast();
 
   // Mock data
-  const [tickets] = useState<ParkingTicket[]>([
+  const [tickets, setTickets] = useState<ParkingTicket[]>([
     { 
       ticketID: 1, 
       licensePlate: "ABC-123", 
@@ -76,6 +77,59 @@ export function TicketManagement() {
     },
   ]);
 
+  const handleExtendTicket = (ticketId: number) => {
+    console.log('Extend ticket clicked:', ticketId);
+    setTickets(tickets => tickets.map(ticket => 
+      ticket.ticketID === ticketId 
+        ? { ...ticket, expiredTime: new Date(new Date(ticket.expiredTime).getTime() + 2 * 60 * 60 * 1000).toISOString() }
+        : ticket
+    ));
+    toast({
+      title: "Ticket Extended",
+      description: `Ticket #${ticketId} has been extended by 2 hours.`,
+    });
+  };
+
+  const handleVoidTicket = (ticketId: number) => {
+    console.log('Void ticket clicked:', ticketId);
+    setTickets(tickets => tickets.map(ticket => 
+      ticket.ticketID === ticketId 
+        ? { ...ticket, status: 'Used' as const }
+        : ticket
+    ));
+    toast({
+      title: "Ticket Voided",
+      description: `Ticket #${ticketId} has been voided.`,
+      variant: "destructive",
+    });
+  };
+
+  const handleRenewTicket = (ticketId: number) => {
+    console.log('Renew ticket clicked:', ticketId);
+    setTickets(tickets => tickets.map(ticket => 
+      ticket.ticketID === ticketId 
+        ? { 
+            ...ticket, 
+            status: 'Active' as const,
+            issuedTime: new Date().toISOString(),
+            expiredTime: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+          }
+        : ticket
+    ));
+    toast({
+      title: "Ticket Renewed",
+      description: `Ticket #${ticketId} has been renewed.`,
+    });
+  };
+
+  const handleIssueNewTicket = () => {
+    console.log('Issue new ticket clicked');
+    toast({
+      title: "Issue New Ticket",
+      description: "New ticket form would open here.",
+    });
+  };
+
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -116,7 +170,7 @@ export function TicketManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Ticket Management</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleIssueNewTicket}>
           <Plus className="h-4 w-4 mr-2" />
           Issue New Ticket
         </Button>
@@ -245,16 +299,16 @@ export function TicketManagement() {
                 <div className="flex gap-2">
                   {ticket.status === 'Active' && (
                     <>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleExtendTicket(ticket.ticketID)}>
                         Extend
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleVoidTicket(ticket.ticketID)}>
                         Void
                       </Button>
                     </>
                   )}
                   {ticket.status === 'Expired' && (
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleRenewTicket(ticket.ticketID)}>
                       Renew
                     </Button>
                   )}
