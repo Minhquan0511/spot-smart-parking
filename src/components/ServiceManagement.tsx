@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Settings } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface Service {
   serviceID: number;
@@ -19,9 +20,12 @@ interface Service {
 
 export function ServiceManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const { toast } = useToast();
 
   // Mock data
-  const [services] = useState<Service[]>([
+  const [services, setServices] = useState<Service[]>([
     { serviceID: 1, serviceName: "Monthly Parking", servicePrice: 150.00, vehicleType: "Car", activeRegistrations: 45 },
     { serviceID: 2, serviceName: "Daily Parking", servicePrice: 15.00, vehicleType: "Car", activeRegistrations: 123 },
     { serviceID: 3, serviceName: "Motorcycle Parking", servicePrice: 8.00, vehicleType: "Motorcycle", activeRegistrations: 28 },
@@ -29,6 +33,67 @@ export function ServiceManagement() {
     { serviceID: 5, serviceName: "Premium Parking", servicePrice: 200.00, vehicleType: "Car", activeRegistrations: 18 },
     { serviceID: 6, serviceName: "Overnight Parking", servicePrice: 20.00, vehicleType: "All", activeRegistrations: 67 },
   ]);
+
+  const handleAddService = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.log('Adding service...');
+    const formData = new FormData(event.currentTarget);
+    const newService: Service = {
+      serviceID: Math.max(...services.map(s => s.serviceID)) + 1,
+      serviceName: formData.get('serviceName') as string,
+      servicePrice: parseFloat(formData.get('servicePrice') as string),
+      vehicleType: formData.get('vehicleType') as string,
+      activeRegistrations: 0,
+    };
+    setServices([...services, newService]);
+    setIsAddDialogOpen(false);
+    toast({
+      title: "Service Added",
+      description: `${newService.serviceName} has been added successfully.`,
+    });
+  };
+
+  const handleEditService = (service: Service) => {
+    console.log('Edit service clicked:', service.serviceID);
+    setEditingService(service);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateService = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingService) return;
+    
+    console.log('Updating service:', editingService.serviceID);
+    const formData = new FormData(event.currentTarget);
+    const updatedService: Service = {
+      ...editingService,
+      serviceName: formData.get('serviceName') as string,
+      servicePrice: parseFloat(formData.get('servicePrice') as string),
+      vehicleType: formData.get('vehicleType') as string,
+    };
+    
+    setServices(services.map(s => 
+      s.serviceID === editingService.serviceID ? updatedService : s
+    ));
+    setIsEditDialogOpen(false);
+    setEditingService(null);
+    toast({
+      title: "Service Updated",
+      description: `${updatedService.serviceName} has been updated successfully.`,
+    });
+  };
+
+  const handleDeleteService = (service: Service) => {
+    console.log('Delete service clicked:', service.serviceID);
+    if (window.confirm(`Are you sure you want to delete ${service.serviceName}?`)) {
+      setServices(services.filter(s => s.serviceID !== service.serviceID));
+      toast({
+        title: "Service Deleted",
+        description: `${service.serviceName} has been deleted.`,
+        variant: "destructive",
+      });
+    }
+  };
 
   const getVehicleTypeColor = (type: string) => {
     switch (type) {
@@ -55,38 +120,90 @@ export function ServiceManagement() {
             <DialogHeader>
               <DialogTitle>Add New Service</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <form onSubmit={handleAddService} className="space-y-4">
               <div>
                 <Label htmlFor="serviceName">Service Name</Label>
-                <Input id="serviceName" placeholder="Monthly Parking" />
+                <Input id="serviceName" name="serviceName" placeholder="Monthly Parking" required />
               </div>
               <div>
                 <Label htmlFor="servicePrice">Price ($)</Label>
-                <Input id="servicePrice" placeholder="150.00" type="number" step="0.01" />
+                <Input id="servicePrice" name="servicePrice" placeholder="150.00" type="number" step="0.01" required />
               </div>
               <div>
                 <Label htmlFor="vehicleType">Vehicle Type</Label>
-                <Select>
+                <Select name="vehicleType" required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="car">Car</SelectItem>
-                    <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                    <SelectItem value="electric">Electric</SelectItem>
-                    <SelectItem value="suv">SUV</SelectItem>
-                    <SelectItem value="truck">Truck</SelectItem>
-                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="Car">Car</SelectItem>
+                    <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                    <SelectItem value="Electric">Electric</SelectItem>
+                    <SelectItem value="SUV">SUV</SelectItem>
+                    <SelectItem value="Truck">Truck</SelectItem>
+                    <SelectItem value="All">All</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full" onClick={() => setIsAddDialogOpen(false)}>
+              <Button type="submit" className="w-full">
                 Add Service
               </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Service</DialogTitle>
+          </DialogHeader>
+          {editingService && (
+            <form onSubmit={handleUpdateService} className="space-y-4">
+              <div>
+                <Label htmlFor="editServiceName">Service Name</Label>
+                <Input 
+                  id="editServiceName" 
+                  name="serviceName" 
+                  defaultValue={editingService.serviceName}
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="editServicePrice">Price ($)</Label>
+                <Input 
+                  id="editServicePrice" 
+                  name="servicePrice" 
+                  defaultValue={editingService.servicePrice}
+                  type="number" 
+                  step="0.01" 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="editVehicleType">Vehicle Type</Label>
+                <Select name="vehicleType" defaultValue={editingService.vehicleType} required>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Car">Car</SelectItem>
+                    <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                    <SelectItem value="Electric">Electric</SelectItem>
+                    <SelectItem value="SUV">SUV</SelectItem>
+                    <SelectItem value="Truck">Truck</SelectItem>
+                    <SelectItem value="All">All</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full">
+                Update Service
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -133,11 +250,16 @@ export function ServiceManagement() {
                 </div>
 
                 <div className="flex gap-2 pt-4 border-t">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditService(service)}>
                     <Edit className="h-4 w-4 mr-1" />
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteService(service)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

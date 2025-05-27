@@ -39,6 +39,7 @@ export function CustomerManagement() {
 
   const handleAddCustomer = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    console.log('Adding customer...');
     const formData = new FormData(event.currentTarget);
     const newCustomer: Customer = {
       customerID: Math.max(...customers.map(c => c.customerID)) + 1,
@@ -57,6 +58,7 @@ export function CustomerManagement() {
   };
 
   const handleEditCustomer = (customer: Customer) => {
+    console.log('Edit customer clicked:', customer.customerID);
     setEditingCustomer(customer);
     setIsEditDialogOpen(true);
   };
@@ -65,6 +67,7 @@ export function CustomerManagement() {
     event.preventDefault();
     if (!editingCustomer) return;
     
+    console.log('Updating customer:', editingCustomer.customerID);
     const formData = new FormData(event.currentTarget);
     const updatedCustomer: Customer = {
       ...editingCustomer,
@@ -86,6 +89,7 @@ export function CustomerManagement() {
   };
 
   const handleDeleteCustomer = (customer: Customer) => {
+    console.log('Delete customer clicked:', customer.customerID);
     if (window.confirm(`Are you sure you want to delete ${customer.firstName} ${customer.lastName}?`)) {
       setCustomers(customers.filter(c => c.customerID !== customer.customerID));
       toast({

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, UserCheck, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface Employee {
   employeeID: number;
@@ -24,10 +25,13 @@ interface Employee {
 export function EmployeeManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const { toast } = useToast();
 
   // Mock data
-  const [employees] = useState<Employee[]>([
+  const [employees, setEmployees] = useState<Employee[]>([
     { employeeID: 1, firstName: "Sarah", lastName: "Wilson", phoneNumber: "555-0111", salary: 45000, jobTitle: "Parking Attendant", birthDate: "1990-05-15", status: "Active", currentShift: "Morning Shift" },
     { employeeID: 2, firstName: "Mike", lastName: "Chen", phoneNumber: "555-0222", salary: 55000, jobTitle: "Security Guard", birthDate: "1988-12-03", status: "On Break", currentShift: "Day Shift" },
     { employeeID: 3, firstName: "Lisa", lastName: "Rodriguez", phoneNumber: "555-0333", salary: 65000, jobTitle: "Supervisor", birthDate: "1985-08-22", status: "Active", currentShift: "Day Shift" },
@@ -42,6 +46,73 @@ export function EmployeeManagement() {
     const matchesStatus = filterStatus === "all" || employee.status.toLowerCase().replace(" ", "") === filterStatus.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  const handleAddEmployee = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.log('Adding employee...');
+    const formData = new FormData(event.currentTarget);
+    const newEmployee: Employee = {
+      employeeID: Math.max(...employees.map(e => e.employeeID)) + 1,
+      firstName: formData.get('firstName') as string,
+      lastName: formData.get('lastName') as string,
+      phoneNumber: formData.get('phone') as string,
+      salary: parseFloat(formData.get('salary') as string),
+      jobTitle: formData.get('jobTitle') as string,
+      birthDate: formData.get('birthDate') as string,
+      status: 'Active',
+    };
+    setEmployees([...employees, newEmployee]);
+    setIsAddDialogOpen(false);
+    toast({
+      title: "Employee Added",
+      description: `${newEmployee.firstName} ${newEmployee.lastName} has been added successfully.`,
+    });
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    console.log('Edit employee clicked:', employee.employeeID);
+    setEditingEmployee(employee);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateEmployee = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingEmployee) return;
+    
+    console.log('Updating employee:', editingEmployee.employeeID);
+    const formData = new FormData(event.currentTarget);
+    const updatedEmployee: Employee = {
+      ...editingEmployee,
+      firstName: formData.get('firstName') as string,
+      lastName: formData.get('lastName') as string,
+      phoneNumber: formData.get('phone') as string,
+      salary: parseFloat(formData.get('salary') as string),
+      jobTitle: formData.get('jobTitle') as string,
+      birthDate: formData.get('birthDate') as string,
+    };
+    
+    setEmployees(employees.map(e => 
+      e.employeeID === editingEmployee.employeeID ? updatedEmployee : e
+    ));
+    setIsEditDialogOpen(false);
+    setEditingEmployee(null);
+    toast({
+      title: "Employee Updated",
+      description: `${updatedEmployee.firstName} ${updatedEmployee.lastName} has been updated successfully.`,
+    });
+  };
+
+  const handleDeleteEmployee = (employee: Employee) => {
+    console.log('Delete employee clicked:', employee.employeeID);
+    if (window.confirm(`Are you sure you want to delete ${employee.firstName} ${employee.lastName}?`)) {
+      setEmployees(employees.filter(e => e.employeeID !== employee.employeeID));
+      toast({
+        title: "Employee Deleted",
+        description: `${employee.firstName} ${employee.lastName} has been deleted.`,
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -77,52 +148,133 @@ export function EmployeeManagement() {
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <form onSubmit={handleAddEmployee} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="Sarah" />
+                  <Input id="firstName" name="firstName" placeholder="Sarah" required />
                 </div>
                 <div>
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Wilson" />
+                  <Input id="lastName" name="lastName" placeholder="Wilson" required />
                 </div>
               </div>
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" placeholder="555-0111" />
+                <Input id="phone" name="phone" placeholder="555-0111" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="salary">Salary ($)</Label>
-                  <Input id="salary" placeholder="45000" type="number" />
+                  <Input id="salary" name="salary" placeholder="45000" type="number" required />
                 </div>
                 <div>
                   <Label htmlFor="jobTitle">Job Title</Label>
-                  <Select>
+                  <Select name="jobTitle" required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select job title" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="parking-attendant">Parking Attendant</SelectItem>
-                      <SelectItem value="security-guard">Security Guard</SelectItem>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="Parking Attendant">Parking Attendant</SelectItem>
+                      <SelectItem value="Security Guard">Security Guard</SelectItem>
+                      <SelectItem value="Supervisor">Supervisor</SelectItem>
+                      <SelectItem value="Maintenance">Maintenance</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div>
                 <Label htmlFor="birthDate">Birth Date</Label>
-                <Input id="birthDate" type="date" />
+                <Input id="birthDate" name="birthDate" type="date" required />
               </div>
-              <Button className="w-full" onClick={() => setIsAddDialogOpen(false)}>
+              <Button type="submit" className="w-full">
                 Add Employee
               </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Employee</DialogTitle>
+          </DialogHeader>
+          {editingEmployee && (
+            <form onSubmit={handleUpdateEmployee} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editFirstName">First Name</Label>
+                  <Input 
+                    id="editFirstName" 
+                    name="firstName" 
+                    defaultValue={editingEmployee.firstName}
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editLastName">Last Name</Label>
+                  <Input 
+                    id="editLastName" 
+                    name="lastName" 
+                    defaultValue={editingEmployee.lastName}
+                    required 
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="editPhone">Phone Number</Label>
+                <Input 
+                  id="editPhone" 
+                  name="phone" 
+                  defaultValue={editingEmployee.phoneNumber}
+                  required 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editSalary">Salary ($)</Label>
+                  <Input 
+                    id="editSalary" 
+                    name="salary" 
+                    defaultValue={editingEmployee.salary}
+                    type="number" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editJobTitle">Job Title</Label>
+                  <Select name="jobTitle" defaultValue={editingEmployee.jobTitle} required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Parking Attendant">Parking Attendant</SelectItem>
+                      <SelectItem value="Security Guard">Security Guard</SelectItem>
+                      <SelectItem value="Supervisor">Supervisor</SelectItem>
+                      <SelectItem value="Maintenance">Maintenance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="editBirthDate">Birth Date</Label>
+                <Input 
+                  id="editBirthDate" 
+                  name="birthDate" 
+                  defaultValue={editingEmployee.birthDate}
+                  type="date" 
+                  required 
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Update Employee
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Search and Filter */}
       <Card>
@@ -191,10 +343,15 @@ export function EmployeeManagement() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleEditEmployee(employee)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteEmployee(employee)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
