@@ -1,5 +1,5 @@
 
-import { Car, Users, MapPin, Settings, UserCheck, Ticket, LayoutDashboard, ParkingMeter, LogOut } from "lucide-react";
+import { Car, Users, MapPin, Settings, UserCheck, Ticket, LayoutDashboard, ParkingMeter } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,10 +11,8 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarTrigger,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { ActivePage } from "@/pages/Index";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface AppSidebarProps {
   activePage: ActivePage;
@@ -60,15 +58,9 @@ const menuItems = [
 ];
 
 export function AppSidebar({ activePage, setActivePage }: AppSidebarProps) {
-  const { logout, user } = useAuth();
-
   const handleMenuClick = (page: ActivePage) => {
     console.log('Menu clicked:', page);
     setActivePage(page);
-  };
-
-  const handleLogout = () => {
-    logout();
   };
 
   return (
@@ -101,18 +93,6 @@ export function AppSidebar({ activePage, setActivePage }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-gray-200 p-4">
-        <div className="text-sm text-gray-600 mb-2">
-          Logged in as: {user?.email}
-        </div>
-        <SidebarMenuButton 
-          onClick={handleLogout}
-          className="hover:bg-red-50 hover:text-red-700 cursor-pointer"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </SidebarMenuButton>
-      </SidebarFooter>
     </Sidebar>
   );
 }
