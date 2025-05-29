@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Clock, Car } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MapPin, Clock, Car, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ParkingSpot {
@@ -17,9 +20,19 @@ interface ParkingSpot {
   endTime?: string;
 }
 
+interface NewParkingSpotForm {
+  spotType: string;
+  status: string;
+  parkID: string;
+  licensePlate: string;
+  startTime: string;
+  endTime: string;
+}
+
 export function ParkingSpotManagement() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Mock data
@@ -31,6 +44,55 @@ export function ParkingSpotManagement() {
     { parkingSpotID: 5, spotType: "Electric", status: "Maintenance", parkID: 1, parkName: "Main Lot" },
     { parkingSpotID: 6, spotType: "Standard", status: "Occupied", parkID: 2, parkName: "North Lot", licensePlate: "DEF-456", startTime: "2024-05-26 10:30", endTime: "2024-05-26 16:30" },
   ]);
+
+  const [newSpotForm, setNewSpotForm] = useState<NewParkingSpotForm>({
+    spotType: "",
+    status: "",
+    parkID: "",
+    licensePlate: "",
+    startTime: "",
+    endTime: "",
+  });
+
+  // Mock parking lots for the dropdown
+  const parkingLots = [
+    { parkID: 1, parkName: "Main Lot" },
+    { parkID: 2, parkName: "North Lot" },
+    { parkID: 3, parkName: "South Lot" },
+  ];
+
+  const handleAddParkingSpot = () => {
+    console.log('Adding new parking spot:', newSpotForm);
+    
+    const selectedParkingLot = parkingLots.find(lot => lot.parkID === parseInt(newSpotForm.parkID));
+    
+    const newSpot: ParkingSpot = {
+      parkingSpotID: Math.max(...parkingSpots.map(s => s.parkingSpotID)) + 1,
+      spotType: newSpotForm.spotType,
+      status: newSpotForm.status as 'Occupied' | 'Available' | 'Reserved' | 'Maintenance',
+      parkID: parseInt(newSpotForm.parkID),
+      parkName: selectedParkingLot?.parkName || "Unknown",
+      licensePlate: newSpotForm.licensePlate || undefined,
+      startTime: newSpotForm.startTime || undefined,
+      endTime: newSpotForm.endTime || undefined,
+    };
+
+    setParkingSpots([...parkingSpots, newSpot]);
+    setIsAddDialogOpen(false);
+    setNewSpotForm({
+      spotType: "",
+      status: "",
+      parkID: "",
+      licensePlate: "",
+      startTime: "",
+      endTime: "",
+    });
+
+    toast({
+      title: "Parking Spot Added",
+      description: `New ${newSpotForm.spotType} parking spot has been created successfully.`,
+    });
+  };
 
   const handleReserveSpot = (spotId: number) => {
     console.log('Reserve spot clicked:', spotId);
@@ -109,6 +171,110 @@ export function ParkingSpotManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Parking Spot Management</h1>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Parking Spot
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add New Parking Spot</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="spotType">Spot Type</Label>
+                <Select value={newSpotForm.spotType} onValueChange={(value) => setNewSpotForm({...newSpotForm, spotType: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select spot type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Standard">Standard</SelectItem>
+                    <SelectItem value="Compact">Compact</SelectItem>
+                    <SelectItem value="Disabled">Disabled</SelectItem>
+                    <SelectItem value="Electric">Electric</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={newSpotForm.status} onValueChange={(value) => setNewSpotForm({...newSpotForm, status: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Available">Available</SelectItem>
+                    <SelectItem value="Occupied">Occupied</SelectItem>
+                    <SelectItem value="Reserved">Reserved</SelectItem>
+                    <SelectItem value="Maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="parkID">Parking Lot</Label>
+                <Select value={newSpotForm.parkID} onValueChange={(value) => setNewSpotForm({...newSpotForm, parkID: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select parking lot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parkingLots.map((lot) => (
+                      <SelectItem key={lot.parkID} value={lot.parkID.toString()}>
+                        {lot.parkName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="licensePlate">License Plate (Optional)</Label>
+                <Input
+                  id="licensePlate"
+                  placeholder="ABC-123"
+                  value={newSpotForm.licensePlate}
+                  onChange={(e) => setNewSpotForm({...newSpotForm, licensePlate: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start Time (Optional)</Label>
+                  <Input
+                    id="startTime"
+                    type="datetime-local"
+                    value={newSpotForm.startTime}
+                    onChange={(e) => setNewSpotForm({...newSpotForm, startTime: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endTime">End Time (Optional)</Label>
+                  <Input
+                    id="endTime"
+                    type="datetime-local"
+                    value={newSpotForm.endTime}
+                    onChange={(e) => setNewSpotForm({...newSpotForm, endTime: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAddParkingSpot}
+                  disabled={!newSpotForm.spotType || !newSpotForm.status || !newSpotForm.parkID}
+                >
+                  Add Parking Spot
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats */}
